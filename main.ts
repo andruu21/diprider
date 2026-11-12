@@ -3,7 +3,7 @@
 // Long-only, one position, full-equity buys, 100-bps slippage cap.
 //
 // Entry (on the latest close, filled at the next open):
-//   - trend: the close is above the close of 75 minutes ago by more than 60 bps
+//   - trend: the close is above the close of 75 minutes ago by more than 50 bps
 //   - dip:   the close is at least 15 bps below the highest close of the prior 45 minutes
 //   - cooldown: at least 10 bars since the last exit
 // Exit:
@@ -17,10 +17,10 @@ import { runBars } from './vendor/makefun-bars.ts';
 
 const TREND_SPAN = 75;
 const TREND_THR = 50.0;   // bps
-const DIP_SPAN = 30;
+const DIP_SPAN = 45;
 const DIP_THR = 15.0;     // bps below the max of the prior DIP_SPAN closes
-const STOP_BPS = 60.0;   // bps below entry close
-const TP_BPS = 80.0;      // bps above entry close, on the peak bar-high since entry
+const STOP_BPS = 100.0;   // bps below entry close
+const TP_BPS = 90.0;      // bps above entry close, on the peak bar-high since entry
 const COOLDOWN = 10;      // bars after an exit before a new entry
 const MAX_SLIP = 100;
 const SYMBOL = 'CBBTC';
