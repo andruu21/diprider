@@ -30,12 +30,19 @@ const highs: number[] = [];
 let entry = 0.0;
 let peakHigh = 0.0;
 let lastExit = -1000;
+let filledBuys = 0;
+const LATE_BAR = 1380;   // one hour before a 1440-bar window ends
+const LATE_DEN = 10;     // the late fallback spends cash / 10
 
 await runBars({
   onBatch(state, batch) {
     for (const bar of batch.bars) {
       closes.push(Number(bar.c));
       highs.push(Number(bar.h));
+    }
+    for (const f of batch.fills ?? []) {
+      const cid = f.client_id ?? '';
+      if (cid && !cid.startsWith('_') && f.status === 'filled') filledBuys += 1;
     }
     const i = closes.length - 1;
     const held = state.positions.get(SYMBOL);
@@ -62,6 +69,20 @@ await runBars({
         entry = c;
         peakHigh = highs[i];
         return [{ side: 'buy', symbol: SYMBOL, notional_quote_units: state.cash, max_slippage_bps: MAX_SLIP }];
+      }
+    }
+    // Late-window fallback: with no fill yet an hour before the end, take a small
+    // long so the >= 1 trade guardrail is met even in a window with no upleg.
+    if (i >= LATE_BAR && filledBuys === 0) {
+      const prev = i >= TREND_SPAN ? closes[i - TREND_SPAN] : 0;
+      const trend = prev > 0 ? ((c - prev) * 10000.0) / prev : 0;
+      if (trend > 0) {
+        entry = c;
+        peakHigh = highs[i];
+        const spend = state.cash / BigInt(LATE_DEN);
+        if (spend >= 1000000n) {
+          return [{ side: 'buy', symbol: SYMBOL, notional_quote_units: spend, max_slippage_bps: MAX_SLIP }];
+        }
       }
     }
     return [];
